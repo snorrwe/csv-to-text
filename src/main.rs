@@ -41,12 +41,15 @@ fn App() -> impl IntoView {
         }
     });
 
-    let (template, set_template) = create_signal("".to_owned());
+    let (csv_headers, set_csv_headers) = create_signal(Default::default());
 
     let rows = move || {
         let csv = csv();
         let mut reader = csv::Reader::from_reader(csv.as_bytes());
         let header = reader.headers().ok().cloned();
+        if let Some(header) = header.as_ref() {
+            set_csv_headers(header.clone());
+        }
         reader
             .records()
             .into_iter()
@@ -63,6 +66,17 @@ fn App() -> impl IntoView {
             .collect::<Vec<_>>()
     };
 
+    let csv_headers = move || {
+        csv_headers()
+            .iter()
+            .map(|title| {
+                view! { <li>{title.to_owned()}</li> }
+            })
+            .collect_view()
+    };
+
+    let (template, set_template) = create_signal("".to_owned());
+
     let md = move || {
         let mut reg = handlebars::Handlebars::new();
         let template = template.get();
@@ -71,7 +85,7 @@ fn App() -> impl IntoView {
         let rows = rows();
         rows.into_iter()
             .map(|row| reg.render("template", &row).unwrap())
-            .map(|row| view! {<pre>{row}</pre>})
+            .map(|row| view! { <pre>{row}</pre> })
             .collect_view()
     };
 
@@ -80,8 +94,8 @@ fn App() -> impl IntoView {
     };
 
     view! {
-        <p>CSV file: {csv}</p>
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
+        <div>Headers: <ul>{csv_headers}</ul></div>
         <textarea value=template on:change=update_templates></textarea>
         {md}
     }
