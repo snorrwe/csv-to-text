@@ -22,7 +22,7 @@ fn App() -> impl IntoView {
             let reader = FileReader::new().expect("Failed to create filereader");
             let r = reader.clone();
             let cb = Closure::wrap(Box::new(move |_ev: web_sys::ProgressEvent| {
-                log!("Loaded file");
+                log!("File loading done");
                 match r.result() {
                     Ok(content) => {
                         let content = content.as_string().unwrap();
