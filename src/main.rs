@@ -77,11 +77,16 @@ fn App() -> impl IntoView {
 
     let (template, set_template) = create_signal("".to_owned());
 
-    let preview = move || {
+    let template_reg = move || {
         let mut reg = handlebars::Handlebars::new();
         let template = template.get();
         reg.register_template_string("template", template.as_str())
             .unwrap();
+        reg
+    };
+
+    let preview = move || {
+        let reg = template_reg();
         let rows = rows();
         rows.into_iter()
             .take(5)
