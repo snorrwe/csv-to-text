@@ -16,6 +16,17 @@ fn App() -> impl IntoView {
     // Provides context that manages stylesheets, titles, meta tags, etc.
     provide_meta_context();
 
+    view! {
+        <Stylesheet id="leptos" href="/pkg/tailwind.css"/>
+
+        <main>
+            <CsvConverter/>
+        </main>
+    }
+}
+
+#[component]
+fn CsvConverter() -> impl IntoView {
     let (csv, set_csv) = create_signal("".to_owned());
     let csv_input: NodeRef<html::Input> = create_node_ref();
 
@@ -74,7 +85,11 @@ fn App() -> impl IntoView {
         csv_headers()
             .iter()
             .map(|title| {
-                view! { <li>{title.to_owned()}</li> }
+                view! {
+                    <li class="flex flex-row">
+                        <pre>{title.to_owned()}</pre>
+                    </li>
+                }
             })
             .collect_view()
     };
@@ -104,18 +119,14 @@ fn App() -> impl IntoView {
     };
 
     view! {
-        <Stylesheet id="leptos" href="/pkg/tailwind.css"/>
-
-        <main>
-            <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
-            <div>Headers: <ul>{csv_headers}</ul></div>
-            <label for="template">
-                <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
-                    "Handlebars template string"
-                </a>
-            </label>
-            <textarea name="template" value=template on:change=update_template></textarea>
-            <div>"Preview:" {preview}</div>
-        </main>
+        <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
+        <div>Headers: <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
+        <label for="template">
+            <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
+                "Handlebars template string"
+            </a>
+        </label>
+        <textarea name="template" value=template on:change=update_template></textarea>
+        <div>"Preview:" {preview}</div>
     }
 }
