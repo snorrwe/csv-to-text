@@ -306,7 +306,7 @@ fn CsvConverter() -> impl IntoView {
 
             <form on:submit=on_download>
                 <div>
-                    <label for="filename-template">"Filename: "</label>
+                    <label for="filename-template">"Filename template: "</label>
                     <input
                         type="text"
                         class="rounded-lg border-2 border-gray-400"
