@@ -8,6 +8,7 @@ use web_sys::{
 };
 
 fn main() {
+    std::panic::set_hook(Box::new(console_error_panic_hook::hook));
     leptos::mount_to_body(App)
 }
 
@@ -59,6 +60,7 @@ fn CsvConverter() -> impl IntoView {
     let (csv_headers, set_csv_headers) = create_signal(Default::default());
 
     let rows = move || {
+        log!("Parsing csv");
         let csv = csv();
         let mut reader = csv::Reader::from_reader(csv.as_bytes());
         let header = reader.headers().ok().cloned();
@@ -105,6 +107,7 @@ fn CsvConverter() -> impl IntoView {
     };
 
     let preview = move || {
+        log!("Rendering preview");
         let reg = template_reg();
         let rows = rows();
         rows.into_iter()
