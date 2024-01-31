@@ -1,3 +1,4 @@
+use csv::StringRecord;
 use leptos::logging::{error, log};
 use leptos::*;
 use leptos_meta::{provide_meta_context, Stylesheet};
@@ -62,29 +63,12 @@ fn CsvConverter() -> impl IntoView {
     let (head_rows, set_head_rows) = create_signal(Vec::default());
 
     create_effect(move |_| {
-        log!("Parsing csv");
+        log!("Parsing csv head");
         let csv = csv();
-        let mut reader = csv::Reader::from_reader(csv.as_bytes());
-        let header = reader.headers().ok().cloned();
+        let TemplateRows { header, rows } = csv_to_json_rows(csv.as_str(), Some(5));
         if let Some(header) = header.as_ref() {
             set_csv_headers(header.clone());
         }
-        let rows = reader
-            .records()
-            .into_iter()
-            .take(5)
-            .filter_map(|l| l.ok())
-            .map(move |line| {
-                let mut row = serde_json::Map::default();
-
-                for (k, v) in header.as_ref().unwrap().iter().zip(line.iter()) {
-                    row.insert(k.into(), v.into());
-                }
-
-                serde_json::Value::Object(row)
-            })
-            .collect::<Vec<_>>();
-
         set_head_rows.update(|r| *r = rows);
     });
 
@@ -142,6 +126,32 @@ fn CsvConverter() -> impl IntoView {
         set_template.update(move |x| *x = event_target_value(&ev));
     };
 
+    let download_element: NodeRef<html::A> = create_node_ref();
+
+    let on_download = move |ev: leptos::ev::SubmitEvent| {
+        ev.prevent_default();
+        let reg = template_reg();
+        let csv = csv();
+        let postfix = ".md"; // TODO
+        let TemplateRows { header: _, rows } = csv_to_json_rows(csv.as_str(), None);
+        let Some(download_element) = download_element.get() else {
+            return;
+        };
+        for (i, row) in rows.into_iter().enumerate() {
+            if let Ok(rendered) = reg.render("template", &row) {
+                // download as file
+                let payload = format!(
+                    "data:text;charset=utf-8,{}",
+                    urlencoding::encode(rendered.as_str())
+                );
+                let name = format!("{}{postfix}", i + 1);
+                download_element.set_download(name.as_str());
+                download_element.set_href(payload.as_str());
+                download_element.click();
+            }
+        }
+    };
+
     view! {
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
         <div>Headers: <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
@@ -156,12 +166,47 @@ fn CsvConverter() -> impl IntoView {
         <textarea
             class="w-auto h-auto resize border-2 border-gray-400"
             name="template"
-            value=template
+            value="template"
             on:change=update_template
         ></textarea>
         <div>
             <h2 class="h2">"Preview:"</h2>
             {preview}
         </div>
+
+        <form on:submit=on_download>
+            <input type="text" placeholder=".md" name="extension"/>
+            <input type="submit" class="" value="Download"/>
+        </form>
+
+        <a style="display:none" node_ref=download_element></a>
     }
+}
+
+struct TemplateRows {
+    header: Option<StringRecord>,
+    rows: Vec<serde_json::Value>,
+}
+
+fn csv_to_json_rows(csv: &str, limit: Option<usize>) -> TemplateRows {
+    let mut reader = csv::Reader::from_reader(csv.as_bytes());
+    let header = reader.headers().ok().cloned();
+    let h = header.clone();
+    let rows = reader
+        .records()
+        .into_iter()
+        .take(limit.unwrap_or(usize::MAX))
+        .filter_map(|l| l.ok())
+        .map(move |line| {
+            let mut row = serde_json::Map::default();
+
+            for (k, v) in header.as_ref().unwrap().iter().zip(line.iter()) {
+                row.insert(k.into(), v.into());
+            }
+
+            serde_json::Value::Object(row)
+        })
+        .collect::<Vec<_>>();
+
+    TemplateRows { header: h, rows }
 }
