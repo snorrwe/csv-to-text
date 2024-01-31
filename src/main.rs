@@ -1,4 +1,3 @@
-
 use leptos::logging::{error, log};
 use leptos::*;
 use leptos_meta::{provide_meta_context, Stylesheet};
@@ -60,7 +59,9 @@ fn CsvConverter() -> impl IntoView {
 
     let (csv_headers, set_csv_headers) = create_signal(Default::default());
 
-    let rows = move || {
+    let (head_rows, set_head_rows) = create_signal(Vec::default());
+
+    create_effect(move |_| {
         log!("Parsing csv");
         let csv = csv();
         let mut reader = csv::Reader::from_reader(csv.as_bytes());
@@ -68,9 +69,10 @@ fn CsvConverter() -> impl IntoView {
         if let Some(header) = header.as_ref() {
             set_csv_headers(header.clone());
         }
-        reader
+        let rows = reader
             .records()
             .into_iter()
+            .take(5)
             .filter_map(|l| l.ok())
             .map(move |line| {
                 let mut row = serde_json::Map::default();
@@ -81,8 +83,10 @@ fn CsvConverter() -> impl IntoView {
 
                 serde_json::Value::Object(row)
             })
-            .collect::<Vec<_>>()
-    };
+            .collect::<Vec<_>>();
+
+        set_head_rows.update(|r| *r = rows);
+    });
 
     let csv_headers = move || {
         csv_headers()
@@ -110,10 +114,7 @@ fn CsvConverter() -> impl IntoView {
             Err(err) => {
                 set_template_err.update(|x| {
                     error!("Failed to parse template: {err:#?}");
-                    *x = Some(
-                        view! { <pre class="red">{format!("{}", err)}</pre> }
-                        .into_view(),
-                    );
+                    *x = Some(view! { <pre class="red">{format!("{}", err)}</pre> }.into_view());
                 });
             }
         }
@@ -124,12 +125,11 @@ fn CsvConverter() -> impl IntoView {
     let preview = move || {
         log!("Rendering preview");
         let reg = template_reg();
-        let rows = rows();
+        let rows = head_rows();
         rows.into_iter()
-            .take(5)
             .map(|row| reg.render("template", &row))
             .map(|row| match row {
-                Ok(row) => view! { <pre>{row}</pre> }.into_view(),
+                Ok(row) => view! { <pre class="gap-y-5">{row}</pre> }.into_view(),
                 Err(err) => {
                     view! { <p class="red">"Failed to render template: " {format!("{}", err.reason())}</p> }
                         .into_view()
@@ -159,6 +159,9 @@ fn CsvConverter() -> impl IntoView {
             value=template
             on:change=update_template
         ></textarea>
-        <div>"Preview:" {preview}</div>
+        <div>
+            <h2 class="h2">"Preview:"</h2>
+            {preview}
+        </div>
     }
 }
