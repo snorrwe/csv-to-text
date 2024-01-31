@@ -70,6 +70,18 @@ fn Help() -> impl IntoView {
             <p>"Click 'Download'"</p>
         </div>
         <div class="my-10">
+            <p>"Every row of your csv file will be turned into a separate text file."</p>
+            <p>"The contents will be rendered based on the templates."</p>
+            <p>"You can reference columns of your csv file via the `{{column-name}}` syntax"</p>
+        </div>
+        <div class="my-10">
+            <h2 class="text-2xl mb-4">"Limitations"</h2>
+            <p>"Currently the csv file layout is very strict."</p>
+            <p>"The first row is treated as the header"</p>
+            <p>"Handlebars does not play nice with some column names."</p>
+            <p>"For example trying to reference the column `foo(bar)` will result in an error"</p>
+        </div>
+        <div class="my-10">
             <h2 class="text-2xl mb-4">"Example"</h2>
             <p class="text-xl">"File `example.csv`:"</p>
             <pre class="pl-4">{EXAMPLE_CSV}</pre>
@@ -274,7 +286,7 @@ fn CsvConverter() -> impl IntoView {
             </div>
 
             <textarea
-                class="w-auto h-auto resize border-2 border-gray-400"
+                class="w-auto h-auto resize rounded-lg border-2 border-gray-400"
                 name="template"
                 value="template"
                 on:change=update_template
@@ -289,7 +301,7 @@ fn CsvConverter() -> impl IntoView {
                     <label for="filename-template">"Filename: "</label>
                     <input
                         type="text"
-                        class="border-2 border-gray-400"
+                        class="rounded-lg border-2 border-gray-400"
                         value=filename_template
                         on:change=move |ev| {
                             set_filename_template.update(|f| *f = event_target_value(&ev))
@@ -299,7 +311,7 @@ fn CsvConverter() -> impl IntoView {
                     />
                 </div>
                 <div class="gap-4">
-                    <button type="submit" class="hover:cursor-pointer border-2 bg-green text-white">
+                    <button type="submit" class="hover:cursor-pointer rounded-lg border-2 bg-green text-white">
                         "Download"
                     </button>
                 </div>
