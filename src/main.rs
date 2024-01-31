@@ -101,6 +101,14 @@ fn Help() -> impl IntoView {
                 </li>
             </ul>
         </div>
+        <div class="my-5">
+            <p>
+                "The source of this app is available on "
+                <a target="_blank" href="https://github.com/snorrwe/csv-to-text">
+                    GitHub
+                </a>
+            </p>
+        </div>
     }
 }
 
@@ -311,7 +319,10 @@ fn CsvConverter() -> impl IntoView {
                     />
                 </div>
                 <div class="gap-4">
-                    <button type="submit" class="hover:cursor-pointer rounded-lg border-2 bg-green text-white">
+                    <button
+                        type="submit"
+                        class="hover:cursor-pointer rounded-lg border-2 bg-green text-white"
+                    >
                         "Download"
                     </button>
                 </div>
