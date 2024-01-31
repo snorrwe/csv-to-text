@@ -77,26 +77,32 @@ fn App() -> impl IntoView {
 
     let (template, set_template) = create_signal("".to_owned());
 
-    let md = move || {
+    let preview = move || {
         let mut reg = handlebars::Handlebars::new();
         let template = template.get();
         reg.register_template_string("template", template.as_str())
             .unwrap();
         let rows = rows();
         rows.into_iter()
+            .take(5)
             .map(|row| reg.render("template", &row).unwrap())
             .map(|row| view! { <pre>{row}</pre> })
             .collect_view()
     };
 
-    let update_templates = move |ev| {
+    let update_template = move |ev| {
         set_template.update(move |x| *x = event_target_value(&ev));
     };
 
     view! {
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
         <div>Headers: <ul>{csv_headers}</ul></div>
-        <textarea value=template on:change=update_templates></textarea>
-        {md}
+        <label for="template">
+            <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
+                "Handlebars template string"
+            </a>
+        </label>
+        <textarea name="template" value=template on:change=update_template></textarea>
+        <div>"Preview:" {preview}</div>
     }
 }
