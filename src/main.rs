@@ -1,5 +1,6 @@
 use leptos::logging::{error, log};
 use leptos::*;
+use leptos_meta::{provide_meta_context, Stylesheet};
 use leptos_use::use_event_listener;
 use web_sys::{
     wasm_bindgen::{closure::Closure, JsCast},
@@ -12,6 +13,9 @@ fn main() {
 
 #[component]
 fn App() -> impl IntoView {
+    // Provides context that manages stylesheets, titles, meta tags, etc.
+    provide_meta_context();
+
     let (csv, set_csv) = create_signal("".to_owned());
     let csv_input: NodeRef<html::Input> = create_node_ref();
 
@@ -100,14 +104,18 @@ fn App() -> impl IntoView {
     };
 
     view! {
-        <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
-        <div>Headers: <ul>{csv_headers}</ul></div>
-        <label for="template">
-            <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
-                "Handlebars template string"
-            </a>
-        </label>
-        <textarea name="template" value=template on:change=update_template></textarea>
-        <div>"Preview:" {preview}</div>
+        <Stylesheet id="leptos" href="/pkg/tailwind.css"/>
+
+        <main>
+            <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
+            <div>Headers: <ul>{csv_headers}</ul></div>
+            <label for="template">
+                <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
+                    "Handlebars template string"
+                </a>
+            </label>
+            <textarea name="template" value=template on:change=update_template></textarea>
+            <div>"Preview:" {preview}</div>
+        </main>
     }
 }
