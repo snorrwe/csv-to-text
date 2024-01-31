@@ -2,7 +2,7 @@
 module.exports = {
     content: {
         relative: true,
-        files: ["*.html", "./main.css", "./src/**/*.rs"],
+        files: ["*.html", "./style/main.css", "./src/**/*.rs"],
     },
     theme: {
         colors: {},

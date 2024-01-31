@@ -6,4 +6,4 @@ fmt:
     leptosfmt **/*rs
 
 tailwind:
-    tailwindcss -i main.css -o style/output.css
+    tailwindcss -i style/main.css -o style/output.css
