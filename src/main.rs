@@ -211,6 +211,7 @@ fn CsvConverter() -> impl IntoView {
         create_signal("{{filename}}-{{i}}.md".to_owned());
 
     let on_download = move |ev: leptos::ev::SubmitEvent| {
+        log!("Downloading rendered files");
         ev.prevent_default();
         let mut reg = template_reg();
         if let Err(err) = reg.register_template_string("filename", &filename_template()) {
@@ -284,17 +285,24 @@ fn CsvConverter() -> impl IntoView {
             </div>
 
             <form on:submit=on_download>
-                <input
-                    type="text"
-                    class="border-2 border-gray-400"
-                    value=filename_template
-                    on:change=move |ev| {
-                        set_filename_template.update(|f| *f = event_target_value(&ev))
-                    }
+                <div>
+                    <label for="filename-template">"Filename: "</label>
+                    <input
+                        type="text"
+                        class="border-2 border-gray-400"
+                        value=filename_template
+                        on:change=move |ev| {
+                            set_filename_template.update(|f| *f = event_target_value(&ev))
+                        }
 
-                    name="extension"
-                />
-                <input type="submit" class="hover:cursor-pointer" value="Download"/>
+                        name="filename-template"
+                    />
+                </div>
+                <div class="gap-4">
+                    <button type="submit" class="hover:cursor-pointer border-2 bg-green text-white">
+                        "Download"
+                    </button>
+                </div>
             </form>
 
             <a style="display:none" node_ref=download_element></a>
