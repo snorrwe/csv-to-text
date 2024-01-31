@@ -123,10 +123,15 @@ fn CsvConverter() -> impl IntoView {
         <div>Headers: <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
         <label for="template">
             <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
-                "Handlebars template string"
+                "Handlebars template"
             </a>
         </label>
-        <textarea name="template" value=template on:change=update_template></textarea>
+        <textarea
+            class="w-auto h-auto resize border-2 border-gray-400"
+            name="template"
+            value=template
+            on:change=update_template
+        ></textarea>
         <div>"Preview:" {preview}</div>
     }
 }
