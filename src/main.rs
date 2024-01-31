@@ -1,3 +1,4 @@
+
 use leptos::logging::{error, log};
 use leptos::*;
 use leptos_meta::{provide_meta_context, Stylesheet};
@@ -97,12 +98,26 @@ fn CsvConverter() -> impl IntoView {
     };
 
     let (template, set_template) = create_signal("".to_owned());
+    let (template_err, set_template_err) = create_signal(None);
 
     let template_reg = move || {
         let mut reg = handlebars::Handlebars::new();
         let template = template.get();
-        reg.register_template_string("template", template.as_str())
-            .unwrap();
+        match reg.register_template_string("template", template.as_str()) {
+            Ok(_) => set_template_err.update(|x| {
+                x.take();
+            }),
+            Err(err) => {
+                set_template_err.update(|x| {
+                    error!("Failed to parse template: {err:#?}");
+                    *x = Some(
+                        view! { <pre class="red">{format!("{}", err)}</pre> }
+                        .into_view(),
+                    );
+                });
+            }
+        }
+
         reg
     };
 
@@ -112,8 +127,14 @@ fn CsvConverter() -> impl IntoView {
         let rows = rows();
         rows.into_iter()
             .take(5)
-            .map(|row| reg.render("template", &row).unwrap())
-            .map(|row| view! { <pre>{row}</pre> })
+            .map(|row| reg.render("template", &row))
+            .map(|row| match row {
+                Ok(row) => view! { <pre>{row}</pre> }.into_view(),
+                Err(err) => {
+                    view! { <p class="red">"Failed to render template: " {format!("{}", err.reason())}</p> }
+                        .into_view()
+                }
+            })
             .collect_view()
     };
 
@@ -125,10 +146,13 @@ fn CsvConverter() -> impl IntoView {
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
         <div>Headers: <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
         <label for="template">
-            <a href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
+            <a target="_blank" href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
                 "Handlebars template"
             </a>
         </label>
+
+        {move || template_err.get()}
+
         <textarea
             class="w-auto h-auto resize border-2 border-gray-400"
             name="template"
