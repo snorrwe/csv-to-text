@@ -23,9 +23,72 @@ fn App() -> impl IntoView {
     view! {
         <Stylesheet id="leptos" href="/pkg/tailwind.css"/>
 
-        <main>
-            <CsvConverter/>
+        <main class="my-10">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div>
+                    <Help/>
+                </div>
+                <div>
+                    <CsvConverter/>
+                </div>
+            </div>
         </main>
+    }
+}
+
+#[component]
+fn Help() -> impl IntoView {
+    const EXAMPLE_CSV: &str = r#"foo,bar
+1,tiggers
+24,winnie"#;
+
+    const EXAMPLE_BODY: &str = r#"# {{bar}}'s adventures"#;
+    const EXAMPLE_FILENAME: &str = r#"{{filename}}-{{foo}}-{{i}}.md"#;
+    const EXAMPLE_OUT: &[&str] = &["# tigger's adventures", "# winnie's adventures"];
+    view! {
+        <div>
+            <h1 class="text-3xl mb-4">"Usage"</h1>
+            <p>"Upload a csv file."</p>
+            <p>
+                "Add a "
+                <a
+                    target="_blank"
+                    href="https://handlebarsjs.com/guide/expressions.html#basic-usage"
+                >
+                    "Handlebars template"
+                </a> " on how to render the file body"
+            </p>
+            <p>
+                "Add a "
+                <a
+                    target="_blank"
+                    href="https://handlebarsjs.com/guide/expressions.html#basic-usage"
+                >
+                    "Handlebars template"
+                </a> " for the filename"
+            </p>
+            <p>"Click 'Download'"</p>
+        </div>
+        <div class="my-10">
+            <h2 class="text-2xl mb-4">"Example"</h2>
+            <p class="text-xl">"File `example.csv`:"</p>
+            <pre class="pl-4">{EXAMPLE_CSV}</pre>
+            <p class="text-xl">"Template:"</p>
+            <pre class="pl-4">{EXAMPLE_BODY}</pre>
+            <p class="text-xl">"Filename:"</p>
+            <pre class="pl-4">{EXAMPLE_FILENAME}</pre>
+            <p class="text-xl">"Produces:"</p>
+            <ul>
+                <li>
+                    <p class="text-xl">"example-1-1.md"</p>
+                    <pre class="pl-4">{EXAMPLE_OUT[0]}</pre>
+                </li>
+                <li>
+                    <p class="text-xl">"example-24-2.md"</p>
+                    <pre class="pl-4">{EXAMPLE_OUT[1]}</pre>
+                </li>
+            </ul>
+        </div>
     }
 }
 
@@ -182,7 +245,7 @@ fn CsvConverter() -> impl IntoView {
                     let r = row.as_object_mut().unwrap();
                     r.entry("filename")
                         .or_insert_with(|| prefix.display().to_string().into());
-                    r.entry("i").or_insert_with(|| i.into());
+                    r.entry("i").or_insert_with(|| (i + 1).into());
                 }
                 let name = match reg.render("filename", &row) {
                     Ok(x) => x,
@@ -199,41 +262,41 @@ fn CsvConverter() -> impl IntoView {
     };
 
     view! {
-        <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
-        <div>"Columns: " <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
-        <label for="template">
-            <a target="_blank" href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
-                "Handlebars template"
-            </a>
-        </label>
-
-        {move || template_err.get()}
-        {move || csv_error.get()}
-
-        <textarea
-            class="w-auto h-auto resize border-2 border-gray-400"
-            name="template"
-            value="template"
-            on:change=update_template
-        ></textarea>
         <div>
-            <h2 class="h2">"Preview:"</h2>
-            {preview}
+            <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
+            <div>"Columns: " <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
+            <label for="template">"Body template"</label>
+
+            {move || template_err.get()}
+            {move || csv_error.get()}
+
+            <textarea
+                class="w-auto h-auto resize border-2 border-gray-400"
+                name="template"
+                value="template"
+                on:change=update_template
+            ></textarea>
+            <div>
+                <h2 class="h2">"Preview:"</h2>
+                {preview}
+            </div>
+
+            <form on:submit=on_download>
+                <input
+                    type="text"
+                    class="border-2 border-gray-400"
+                    value=filename_template
+                    on:change=move |ev| {
+                        set_filename_template.update(|f| *f = event_target_value(&ev))
+                    }
+
+                    name="extension"
+                />
+                <input type="submit" class="hover:cursor-pointer" value="Download"/>
+            </form>
+
+            <a style="display:none" node_ref=download_element></a>
         </div>
-
-        <form on:submit=on_download>
-            <input
-                type="text"
-                value=filename_template
-                on:change=move |ev| {
-                    set_filename_template.update(|f| *f = event_target_value(&ev))
-                }
-                name="extension"
-            />
-            <input type="submit" class="" value="Download"/>
-        </form>
-
-        <a style="display:none" node_ref=download_element></a>
     }
 }
 
