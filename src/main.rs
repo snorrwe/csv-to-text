@@ -1,3 +1,5 @@
+#![feature(iterator_try_collect)]
+
 use csv::StringRecord;
 use leptos::logging::{error, log};
 use leptos::*;
@@ -58,22 +60,36 @@ fn CsvConverter() -> impl IntoView {
         }
     });
 
-    let (csv_headers, set_csv_headers) = create_signal(Default::default());
-
+    let (csv_columns, set_csv_columns) = create_signal(Default::default());
     let (head_rows, set_head_rows) = create_signal(Vec::default());
+    let (csv_error, set_csv_error) = create_signal(None);
 
     create_effect(move |_| {
         log!("Parsing csv head");
         let csv = csv();
-        let TemplateRows { header, rows } = csv_to_json_rows(csv.as_str(), Some(5));
-        if let Some(header) = header.as_ref() {
-            set_csv_headers(header.clone());
-        }
-        set_head_rows.update(|r| *r = rows);
+        match csv_to_json_rows(csv.as_str(), Some(5)) {
+            Ok(TemplateRows { header, rows }) => {
+                if let Some(header) = header.as_ref() {
+                    set_csv_columns(header.clone());
+                }
+                set_head_rows.update(|r| *r = rows);
+                set_csv_error.update(|e| {
+                    e.take();
+                });
+            }
+            Err(err) => {
+                error!("Failed to parse csv: {err:#?}");
+                set_csv_error.update(|e| {
+                    *e = Some(view! {
+                        <p class="text-red-500">{format!("{err}")}</p>
+                    })
+                });
+            }
+        };
     });
 
     let csv_headers = move || {
-        csv_headers()
+        csv_columns()
             .iter()
             .map(|title| {
                 view! {
@@ -133,7 +149,18 @@ fn CsvConverter() -> impl IntoView {
         let reg = template_reg();
         let csv = csv();
         let postfix = ".md"; // TODO
-        let TemplateRows { header: _, rows } = csv_to_json_rows(csv.as_str(), None);
+        let TemplateRows { header: _, rows } = match csv_to_json_rows(csv.as_str(), None) {
+            Ok(x) => x,
+            Err(err) => {
+                error!("Failed to parse csv: {err:#?}");
+                set_csv_error.update(|e| {
+                    *e = Some(view! {
+                        <p class="text-red-500">{format!("{err}")}</p>
+                    })
+                });
+                return;
+            }
+        };
         let Some(download_element) = download_element.get() else {
             return;
         };
@@ -162,6 +189,7 @@ fn CsvConverter() -> impl IntoView {
         </label>
 
         {move || template_err.get()}
+        {move || csv_error.get()}
 
         <textarea
             class="w-auto h-auto resize border-2 border-gray-400"
@@ -188,25 +216,25 @@ struct TemplateRows {
     rows: Vec<serde_json::Value>,
 }
 
-fn csv_to_json_rows(csv: &str, limit: Option<usize>) -> TemplateRows {
+fn csv_to_json_rows(csv: &str, limit: Option<usize>) -> Result<TemplateRows, csv::Error> {
     let mut reader = csv::Reader::from_reader(csv.as_bytes());
     let header = reader.headers().ok().cloned();
     let h = header.clone();
-    let rows = reader
+    reader
         .records()
         .into_iter()
         .take(limit.unwrap_or(usize::MAX))
-        .filter_map(|l| l.ok())
         .map(move |line| {
-            let mut row = serde_json::Map::default();
+            line.map(|line| {
+                let mut row = serde_json::Map::default();
 
-            for (k, v) in header.as_ref().unwrap().iter().zip(line.iter()) {
-                row.insert(k.into(), v.into());
-            }
+                for (k, v) in header.as_ref().unwrap().iter().zip(line.iter()) {
+                    row.insert(k.into(), v.into());
+                }
 
-            serde_json::Value::Object(row)
+                serde_json::Value::Object(row)
+            })
         })
-        .collect::<Vec<_>>();
-
-    TemplateRows { header: h, rows }
+        .try_collect::<Vec<_>>()
+        .map(|rows| TemplateRows { header: h, rows })
 }
