@@ -32,12 +32,14 @@ fn App() -> impl IntoView {
 #[component]
 fn CsvConverter() -> impl IntoView {
     let (csv, set_csv) = create_signal("".to_owned());
+    let (file_name, set_file_name) = create_signal("".to_owned());
     let csv_input: NodeRef<html::Input> = create_node_ref();
 
     let _ = use_event_listener(csv_input, ev::change, move |ev| {
         let target = event_target::<web_sys::HtmlInputElement>(&ev);
 
         if let Some(file) = target.files().and_then(|f| f.get(0)) {
+            set_file_name.update(|f| *f = file.name());
             let reader = FileReader::new().expect("Failed to create filereader");
             let r = reader.clone();
             let cb = Closure::wrap(Box::new(move |_ev: web_sys::ProgressEvent| {
@@ -148,6 +150,8 @@ fn CsvConverter() -> impl IntoView {
         ev.prevent_default();
         let reg = template_reg();
         let csv = csv();
+        let prefix = std::path::PathBuf::from(file_name());
+        let prefix = prefix.with_extension("");
         let postfix = ".md"; // TODO
         let TemplateRows { header: _, rows } = match csv_to_json_rows(csv.as_str(), None) {
             Ok(x) => x,
@@ -171,7 +175,7 @@ fn CsvConverter() -> impl IntoView {
                     "data:text;charset=utf-8,{}",
                     urlencoding::encode(rendered.as_str())
                 );
-                let name = format!("{}{postfix}", i + 1);
+                let name = format!("{}-{}{postfix}", prefix.display(), i + 1);
                 download_element.set_download(name.as_str());
                 download_element.set_href(payload.as_str());
                 download_element.click();
