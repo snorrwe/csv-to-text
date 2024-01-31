@@ -154,7 +154,7 @@ fn CsvConverter() -> impl IntoView {
 
     view! {
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
-        <div>Headers: <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
+        <div>"Columns: "<ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
         <label for="template">
             <a target="_blank" href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
                 "Handlebars template"
