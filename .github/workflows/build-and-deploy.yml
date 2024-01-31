@@ -1,0 +1,50 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+    
+permissions:
+  contents: write # for committing to gh-pages branch.
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install nightly Rust
+      uses: dtolnay/rust-toolchain@nightly
+    - name: Setup node
+      uses: actions/setup-node@v4
+    - name: Add WASM target
+      run: rustup target add wasm32-unknown-unknown
+    - name: Install tailwindcss
+      run: npm i -g tailwindcss
+    - uses: jetli/trunk-action@v0.4.0
+      with:
+        version: 'latest'
+    - name: Build tailwind
+      run: npx tailwindcss -i style/main.css -o style/output.css
+    - name: Build
+      run: trunk build --release --public-url "${GITHUB_REPOSITORY#*/}"
+      # Deploy to gh-pages branch
+    - name: Deploy 🚀
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+       folder: dist
