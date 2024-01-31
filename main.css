@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    main {
+        @apply flex flex-col items-center w-4/5 flex-1;
+    }
+
+    button {
+        @apply py-2 px-3 text-sm font-bold rounded-md shadow focus:outline-none;
+    }
+}
+
