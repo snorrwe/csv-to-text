@@ -82,9 +82,7 @@ fn CsvConverter() -> impl IntoView {
             Err(err) => {
                 error!("Failed to parse csv: {err:#?}");
                 set_csv_error.update(|e| {
-                    *e = Some(view! {
-                        <p class="text-red-500">{format!("{err}")}</p>
-                    })
+                    *e = Some(view! { <p class="text-red-500">{format!("{err}")}</p> })
                 });
             }
         };
@@ -146,21 +144,25 @@ fn CsvConverter() -> impl IntoView {
 
     let download_element: NodeRef<html::A> = create_node_ref();
 
+    let (filename_template, set_filename_template) = create_signal("{{filename}}-{{i}}.md".to_owned());
+
     let on_download = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
-        let reg = template_reg();
+        let mut reg = template_reg();
+        if let Err(err) = reg.register_template_string("filename", &filename_template()) {
+            set_template_err.update(|e| {
+                *e = Some(view! { <p class="text-red-500">"Failed to parse filename template: " {format!("{err}")}</p> }.into_view())
+            });
+        }
         let csv = csv();
         let prefix = std::path::PathBuf::from(file_name());
         let prefix = prefix.with_extension("");
-        let postfix = ".md"; // TODO
         let TemplateRows { header: _, rows } = match csv_to_json_rows(csv.as_str(), None) {
             Ok(x) => x,
             Err(err) => {
                 error!("Failed to parse csv: {err:#?}");
                 set_csv_error.update(|e| {
-                    *e = Some(view! {
-                        <p class="text-red-500">{format!("{err}")}</p>
-                    })
+                    *e = Some(view! { <p class="text-red-500">{format!("{err}")}</p> })
                 });
                 return;
             }
@@ -168,14 +170,26 @@ fn CsvConverter() -> impl IntoView {
         let Some(download_element) = download_element.get() else {
             return;
         };
-        for (i, row) in rows.into_iter().enumerate() {
+        for (i, mut row) in rows.into_iter().enumerate() {
             if let Ok(rendered) = reg.render("template", &row) {
                 // download as file
                 let payload = format!(
                     "data:text;charset=utf-8,{}",
                     urlencoding::encode(rendered.as_str())
                 );
-                let name = format!("{}-{}{postfix}", prefix.display(), i + 1);
+                {
+                    let r = row.as_object_mut().unwrap();
+                    r.entry("filename")
+                        .or_insert_with(|| prefix.display().to_string().into());
+                    r.entry("i").or_insert_with(|| i.into());
+                }
+                let name = match reg.render("filename", &row) {
+                    Ok(x) => x,
+                    Err(err) => {
+                        error!("Failed to render filename: {err:#?}");
+                        continue;
+                    }
+                };
                 download_element.set_download(name.as_str());
                 download_element.set_href(payload.as_str());
                 download_element.click();
@@ -185,7 +199,7 @@ fn CsvConverter() -> impl IntoView {
 
     view! {
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
-        <div>"Columns: "<ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
+        <div>"Columns: " <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
         <label for="template">
             <a target="_blank" href="https://handlebarsjs.com/guide/expressions.html#basic-usage">
                 "Handlebars template"
@@ -207,7 +221,12 @@ fn CsvConverter() -> impl IntoView {
         </div>
 
         <form on:submit=on_download>
-            <input type="text" placeholder=".md" name="extension"/>
+            <input
+                type="text"
+                value=filename_template
+                on:change=move |ev| { set_filename_template.update(|f| *f = event_target_value(&ev)) }
+                name="extension"
+            />
             <input type="submit" class="" value="Download"/>
         </form>
 
