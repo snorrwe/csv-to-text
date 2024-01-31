@@ -265,10 +265,12 @@ fn CsvConverter() -> impl IntoView {
         <div>
             <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
             <div>"Columns: " <ul class="flex flex-row gap-4 max-100">{csv_headers}</ul></div>
-            <label for="template">"Body template"</label>
+            <div>
+                <label for="template">"Body template"</label>
 
-            {move || template_err.get()}
-            {move || csv_error.get()}
+                {move || template_err.get()}
+                {move || csv_error.get()}
+            </div>
 
             <textarea
                 class="w-auto h-auto resize border-2 border-gray-400"
