@@ -18,9 +18,14 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-deploy:
 
     runs-on: ubuntu-latest
+
+    timeout-minutes: 10
+
+    environment:
+      name: github-pages
 
     steps:
     - uses: actions/checkout@v3
