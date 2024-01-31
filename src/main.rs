@@ -21,9 +21,8 @@ fn App() -> impl IntoView {
         if let Some(file) = target.files().and_then(|f| f.get(0)) {
             let reader = FileReader::new().expect("Failed to create filereader");
             let r = reader.clone();
-            let cb = Closure::wrap(Box::new(move |ev: web_sys::ProgressEvent| {
-                log!("Loaded: {:?}", ev.as_string());
-                log!("???? {:?}", r.result());
+            let cb = Closure::wrap(Box::new(move |_ev: web_sys::ProgressEvent| {
+                log!("Loaded file");
                 match r.result() {
                     Ok(content) => {
                         let content = content.as_string().unwrap();
@@ -42,8 +41,48 @@ fn App() -> impl IntoView {
         }
     });
 
+    let (template, set_template) = create_signal("".to_owned());
+
+    let rows = move || {
+        let csv = csv();
+        let mut reader = csv::Reader::from_reader(csv.as_bytes());
+        let header = reader.headers().ok().cloned();
+        reader
+            .records()
+            .into_iter()
+            .filter_map(|l| l.ok())
+            .map(move |line| {
+                let mut row = serde_json::Map::default();
+
+                for (k, v) in header.as_ref().unwrap().iter().zip(line.iter()) {
+                    row.insert(k.into(), v.into());
+                }
+
+                serde_json::Value::Object(row)
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let md = move || {
+        let mut reg = handlebars::Handlebars::new();
+        let template = template.get();
+        reg.register_template_string("template", template.as_str())
+            .unwrap();
+        let rows = rows();
+        rows.into_iter()
+            .map(|row| reg.render("template", &row).unwrap())
+            .map(|row| view! {<pre>{row}</pre>})
+            .collect_view()
+    };
+
+    let update_templates = move |ev| {
+        set_template.update(move |x| *x = event_target_value(&ev));
+    };
+
     view! {
         <p>CSV file: {csv}</p>
         <input type="file" accept=".csv" placeholder="csv file" node_ref=csv_input/>
+        <textarea value=template on:change=update_templates></textarea>
+        {md}
     }
 }
